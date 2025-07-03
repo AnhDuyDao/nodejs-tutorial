@@ -6,15 +6,23 @@ const userRouter = require('./routes/userRoutes');
 const app = express();
 
 // 1) MIDDLEWARES
-app.use(morgan('dev'));
-
+// morgan for logging simple information of request
+console.log(process.env.NODE_ENV);
+if (process.env.NODE_ENV === 'development') {
+   app.use(morgan('dev'));
+}
+// body parser in 14.x.x version. Help access to req.body
 app.use(express.json());
 
+app.use(express.static(`${__dirname}/public`));
+
+// Custom middleware
 app.use((req, res, next) => {
    console.log('Hello from the middleware');
-   next(); // IMPORTANT if not, response not send back to client
+   next(); // IMPORTANT
 });
 
+// Custom middleware to set request time
 app.use((req, res, next) => {
    req.requestTime = new Date().toISOString();
    next();
