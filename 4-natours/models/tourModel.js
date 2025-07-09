@@ -48,7 +48,8 @@ const tourSchema = new mongoose.Schema({
    images: [String],
    createAt: {
       type: Date,
-      default: Date.now()
+      default: Date.now(),
+      select: false // Hide crateAt field from client
    },
    startDates: [Date]
 });
