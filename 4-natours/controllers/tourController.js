@@ -32,8 +32,40 @@ exports.checkBody = (req, res, next) => {
 
 exports.getAllTours = async (req, res) => {
    try {
+      console.log(req.query);
+      // Build query
+      // 1A) Filtering
+      const queryObj = { ...req.query }; // Copy using
+      const excludeFields = ['page', 'sort', 'limit', 'fields'];
+      excludeFields.forEach(el => delete queryObj[el]);
+
+      // 1B) Advanced filtering
+      // { difficulty: 'easy', duration: { $gte: 5 } }
+      let queryStr = JSON.stringify(queryObj);
+      queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
       // console.log(req.requestTime);
-      const tours = await Tour.find();
+      // Way 1:
+      let query = Tour.find(JSON.parse(queryStr));
+      // Way 2: Chaining mongoose methods
+      // const query = Tour.find()
+      //    .where('duration')
+      //    .equals(5)
+      //    .where('difficulty')
+      //    .equals('easy');
+
+      // 2) Sorting
+      if (req.query.sort) {
+         const sortBy = req.query.sort.split(',').join(' ');
+         query = query.sort(sortBy);
+         // sort('price ratingsAverage')
+      } else {
+         query = query.sort('-createdAt');
+      }
+
+      // Execute query
+      const tours = await query;
+
+      // Send response
       res.status(200).json({
          status: 'success',
          results: tours.length,
