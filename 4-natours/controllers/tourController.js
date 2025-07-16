@@ -109,3 +109,94 @@ exports.deleteTour = async (req, res) => {
       });
    }
 };
+
+exports.getTourStats = async (req, res) => {
+   try {
+      const stats = await Tour.aggregate([
+         {
+            $match: { ratingsAverage: { $gte: 4.5 } }
+         },
+         {
+            $group: {
+               _id: { $toUpper: '$difficulty' },
+               numTours: { $sum: 1 },
+               numRatings: { $sum: '$ratingsQuantity' },
+               avgRating: { $avg: '$ratingsAverage' },
+               avgPrice: { $avg: '$price' },
+               minPrice: { $min: '$price' },
+               maxPrice: { $max: '$price' }
+            }
+         },
+         {
+            $sort: { avgPrice: 1 } // 1 for ascending, -1 for descending
+         }
+         // {
+         //    $match: { _id: { $ne: 'EASY' } } // $ne: not equal EASY
+         // }
+      ]);
+
+      res.status(200).json({
+         status: 'success',
+         data: {
+            stats
+         }
+      });
+   } catch (error) {
+      res.status(404).json({
+         status: 'fail',
+         message: error
+      });
+   }
+};
+
+exports.getMonthlyPlan = async (req, res) => {
+   try {
+      const year = req.params.year * 1; // Convert string to number
+      const plan = await Tour.aggregate([
+         {
+            $unwind: '$startDates' // Deconstructs the startDates array field from the input documents to output a document for each element
+         },
+         {
+            $match: {
+               startDates: {
+                  $gte: new Date(`${year}-01-01`),
+                  $lte: new Date(`${year}-12-31`)
+               }
+            }
+         },
+         {
+            $group: {
+               _id: { $month: '$startDates' }, // Group by month
+               numToursStarts: { $sum: 1 }, // Count the number of tours starting in that month
+               tours: { $push: '$name' } // Push the tour name into an array
+            }
+         },
+         {
+            $addFields: { month: '$_id' } // Add a new field 'month' with the value of '_id'
+         },
+         {
+            $project: {
+               _id: 0 // Exclude the _id field from the output
+            }
+         },
+         {
+            $sort: { numToursStarts: -1 } // Sort by number of tours starting in descending order
+         },
+         {
+            $limit: 12 // Limit the results to 12 months
+         }
+      ]);
+
+      res.status(200).json({
+         status: 'success',
+         data: {
+            plan
+         }
+      });
+   } catch (error) {
+      res.status(404).json({
+         status: 'fail',
+         message: error
+      });
+   }
+};
