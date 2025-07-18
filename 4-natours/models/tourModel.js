@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
+const validator = require('validator');
 
 const tourSchema = new mongoose.Schema(
    {
@@ -7,7 +8,17 @@ const tourSchema = new mongoose.Schema(
          type: String,
          required: [true, 'A tour must have a name'],
          unique: true,
-         trim: true
+         trim: true,
+         maxlength: [
+            40,
+            'A tour name must have less or equal than 40 characters'
+         ],
+         minlength: [
+            10,
+            'A tour name must have more or equal than 10 characters'
+         ]
+         // validate: [validator.isAlpha, 'Tour name must only contain characters']
+         // Do not use () here, it is a reference to the function to mongoose run it later
       },
       slug: String,
       duration: {
@@ -20,11 +31,18 @@ const tourSchema = new mongoose.Schema(
       },
       difficulty: {
          type: String,
-         required: [true, 'A tour must have a difficulty']
+         required: [true, 'A tour must have a difficulty'],
+         enum: {
+            // Validate for string values
+            values: ['easy', 'medium', 'difficult'],
+            message: 'Difficulty is either: easy, medium, or difficult'
+         } // Validate against these values
       },
       ratingsAverage: {
          type: Number,
-         default: 4.5
+         default: 4.5,
+         min: [1, 'Rating must be above 1.0'],
+         max: [5, 'Rating must be below 5.0']
       },
       ratingsQuantity: {
          type: Number,
@@ -34,7 +52,17 @@ const tourSchema = new mongoose.Schema(
          type: Number,
          required: [true, 'A tour must have a price']
       },
-      priceDiscount: Number,
+      priceDiscount: {
+         type: Number,
+         validate: {
+            validator: function(val) {
+               // This only points to current doc on NEW document creation
+               // Not on update
+               return val < this.price;
+            },
+            message: 'Discount price ({VALUE}) should be below regular price'
+         }
+      },
       summary: {
          type: String,
          trim: true,
